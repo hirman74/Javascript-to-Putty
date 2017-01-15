@@ -144,8 +144,6 @@ End Function
 		var i;
 		var j;
 		
-
-		
 		function js_yyyymmdd_hhmmss () {
 			  now = new Date();
 			  year = "" + now.getFullYear();
@@ -229,12 +227,13 @@ End Function
 			
 		}
 		 
-		function DeleteFile() {
-		if (objFSO.FileExists(gpath)) {
-		   var afile = objFSO.GetFile(gpath);
-		   afile.Attributes[0];
-		   afile.Delete();}
-		}
+        function DeleteFile(gpath) {
+            if (objFSO.FileExists(gpath)) {
+                var afile = objFSO.GetFile(gpath);
+                afile.Attributes[0];
+                afile.Delete();
+            }
+        }
 
 		 
 		function CopyFile(FromFile,ToFile,overwrite) {  // Set overwrite to true or false; FromFile, etc = full paths
@@ -270,7 +269,8 @@ End Function
                 return false;
             } else {
                 jsObjFolder = objFSO.GetFile(outputedFile);
-                if(jsObjFolder.size > 0) {
+                //if( (jsObjFolder.size > 0) && (jsObjFolder.name.indexOf('result_') == -1 ) ) {
+                if (jsObjFolder.size > 0) {
                     outputFile = objFSO.OpenTextFile(outputedFile,ForReading,dontWantCreateIt,AsciiMode);
                     var tempHolderArray =[];
                     var lastHolderArray =[];
@@ -332,7 +332,12 @@ End Function
 			var splitListServers = listServers.split('\n');
 			for( i=0; i < splitListServers.length; i++) {
 				// Plink to the server
-				var ExecOperation = WshShell.Exec('.\\bin\\plink.exe ' + String(splitListServers[i]) + ' -l ' + String(document.getElementById("strUser").value) + ' -pw ' + String(document.getElementById("strPassword").value) + ' -batch -m .\\bin\\df-h.txt');
+                
+                if (window.document.getElementById("connectSSH").checked === true){
+    				var ExecOperation = WshShell.Exec('.\\bin\\plink.exe -ssh ' + String(splitListServers[i]) + ' -l ' + String(window.document.getElementById("strUser").value) + ' -pw ' + String(window.document.getElementById("strPassword").value) + ' -batch -m .\\bin\\df-h.txt');
+                } else {
+    				var ExecOperation = WshShell.Exec('.\\bin\\plink.exe ' + String(splitListServers[i]) + ' -l ' + String(window.document.getElementById("strUser").value) + ' -pw ' + String(window.document.getElementById("strPassword").value) + ' -batch -m .\\bin\\df-h.txt');
+                }
 
 				// Check the operation's status
 				while (ExecOperation.Status == 0){}
@@ -356,7 +361,6 @@ End Function
                         tempHolder = String(outputFile0.readline());
                         //alert(tempHolder);
                         if (!(tempHolder.indexOf('Filesystem') > -1)) {
-                            
                             outputFile1.writeline (String(splitListServers[i]) + ' ' + tempHolder );//label each results into formatted text file.
                         }
                     }
@@ -364,26 +368,28 @@ End Function
                 outputFile1.Close();                
 				}				
 			}
-            removingSpaces('.\\input\\' + newDateFileName,'.\\output\\' + newDateFileName);
-            DeleteFile('.\\input\\99999999_999999');
-            ListFilesJSs('.\\output');//collect all results
-            lastHolderArray = findMountedOn ('.\\output\\' + newDateFileName); //ony collect last column of last file output
-                if (lastHolderArray != false) {
-                    window.document.getElementById("spliceFileDated").style.visibility = "visible"
+            removingSpaces('.\\input\\' + newDateFileName,'.\\output\\' + newDateFileName);//using vbscript code here
+            DeleteFile('.\\input\\99999999_999999');           
+                window.document.getElementById("spliceFileDated").style.visibility = "visible"
+                lastHolderArray = findMountedOn (ListFilesJSs('.\\output', 'result_'));
+                if (lastHolderArray != false){
                     fileListDiv = window.document.getElementById('spliceLists');
                         while (fileListDiv.hasChildNodes()) {   
                             fileListDiv.removeChild(fileListDiv.firstChild);
-                        }  
-                        lastHolderArray.forEach(checkboxEachSpliceName);
-                        //lastHolderArray.forEach(function(element) {alert (element);});
-                        self.resizeTo('1','1'); 
-                        sleepingVB();
-                        self.resizeTo('1030',screen.height/1.2); 
-                }
+                        }
+                    lastHolderArray.forEach(checkboxEachSpliceName);
+                    self.resizeTo('1','1'); 
+                    sleepingVB();
+                    self.resizeTo('1030',screen.height-50);  
+                    var l=(screen.width/2 - 1030/2); // centre - half the window width
+                    var t=0; // where you want it vertically
+                    self.moveTo(l,t);                    
+                } 
+                
 		}
 
 
-        function ListFilesJSs(PickFolderObject) {//list all files
+        function ListFilesJSs(PickFolderObject, filesDontInclude) {//list all files
             var jsObjFolder, objFiles, checkboxList, labelList, fileListDiv, tempName, sizeNameFiles;
             fileListDiv = window.document.getElementById('fileListJS');
             while (fileListDiv.hasChildNodes()) {   
@@ -392,24 +398,28 @@ End Function
             jsObjFolder = objFSO.GetFolder(PickFolderObject);		
             objFiles = new Enumerator(jsObjFolder.files);
             //var n = 1;
-            for (; !objFiles.atEnd(); objFiles.moveNext()){
-                if (objFiles.item().name != '99999999_999999') {
-                    checkboxList = window.document.createElement('input');
-                    checkboxList.type = "checkbox";
-                    checkboxList.name = objFiles.item();
-                    checkboxList.value = objFiles.item();
-                    checkboxList.id = objFiles.item();
+                for (; !objFiles.atEnd(); objFiles.moveNext()){
+                    if (objFiles.item().name != '99999999_999999') {
+                        if (!(objFiles.item().name.indexOf(filesDontInclude) > -1)) {
+                            if (objFiles.item().size > 0) {
+                                checkboxList = window.document.createElement('input');
+                                checkboxList.type = "checkbox";
+                                checkboxList.name = objFiles.item();
+                                checkboxList.value = objFiles.item();
+                                checkboxList.id = objFiles.item();
 
-                    labelList = document.createElement('label')
-                    labelList.htmlFor = objFiles.item();
-                    sizeNameFiles = String(objFiles.item().name + ' Filesize = ' + objFiles.item().size + ' bytes');
-                    labelList.appendChild(window.document.createTextNode(sizeNameFiles));
+                                labelList = document.createElement('label')
+                                labelList.htmlFor = objFiles.item();
+                                sizeNameFiles = String(objFiles.item().name + ' Filesize = ' + objFiles.item().size + ' bytes');
+                                labelList.appendChild(window.document.createTextNode(sizeNameFiles));
 
-                    fileListDiv = window.document.getElementById('fileListJS');
-                    fileListDiv.appendChild(checkboxList);
-                    fileListDiv.appendChild(labelList);	
-                    fileListDiv.appendChild(document.createElement("br"));
-                    if (objFiles.item().size > 0) {tempName = objFiles.item()}
+                                fileListDiv = window.document.getElementById('fileListJS');
+                                fileListDiv.appendChild(checkboxList);
+                                fileListDiv.appendChild(labelList);	
+                                fileListDiv.appendChild(document.createElement("br"));
+                                if (objFiles.item().size > 0) {tempName = objFiles.item()}
+                            }
+                        }
                     }
                 }
             return tempName;
@@ -417,11 +427,9 @@ End Function
 
 
         function collectPastFiles() {            
-            //alert (ListFilesJSs('.\\output'));
-
-                lastHolderArray = findMountedOn (ListFilesJSs('.\\output'));
+                window.document.getElementById("spliceFileDated").style.visibility = "visible"
+                lastHolderArray = findMountedOn (ListFilesJSs('.\\output', 'result_'));
                 if (lastHolderArray != false){
-                    window.document.getElementById("spliceFileDated").style.visibility = "visible"
                     fileListDiv = window.document.getElementById('spliceLists');
                         while (fileListDiv.hasChildNodes()) {   
                             fileListDiv.removeChild(fileListDiv.firstChild);
@@ -430,19 +438,27 @@ End Function
                         //lastHolderArray.forEach(function(element) {alert (element);});
                         self.resizeTo('1','1'); 
                         sleepingVB();
-                        self.resizeTo('1030',screen.height/1.2);                    
+                        self.resizeTo('1030',screen.height-50);  
+                        var l=(screen.width/2 - 1030/2); // centre - half the window width
+                        var t=0; // where you want it vertically
+                        self.moveTo(l,t);                    
                 }
 
         }
 
 
-        function checkboxParser() {
+        function checkboxParser(sorting) {
             var typeElement;
             var tempHolder = '';
+            var tempHolderArray = [];
             var checkboxesChecked = [];
             var serverSpliceName = [];
             var selectedFileName = [];
             var countingLines = 0;
+            fileListDiv = window.document.getElementById('resultTable');
+            while (fileListDiv.hasChildNodes()) {   
+                fileListDiv.removeChild(fileListDiv.firstChild);
+            }             
             
             var i;
             var j;
@@ -458,7 +474,6 @@ End Function
                         selectedFileName.push(checkboxesChecked[i]);
                     } else {
                         serverSpliceName.push(checkboxesChecked[i]);
-                        
                     }
                 }
             }
@@ -470,8 +485,9 @@ End Function
                             outputFile0 = objFSO.OpenTextFile(selectedFileName[i],ForReading,dontWantCreateIt,AsciiMode);
                             while (!outputFile0.AtEndOfStream){                         
                                 tempHolder = String(outputFile0.readline());
+                                tempHolderArray = tempHolder.split(',');
                                 for (j = 0; j < serverSpliceName.length; j++ ){
-                                    if (tempHolder.indexOf(serverSpliceName[j]) > -1) {
+                                    if ((tempHolder.indexOf(serverSpliceName[j]) > -1) && (serverSpliceName[j] === tempHolderArray[tempHolderArray.length - 1])) {
                                         countingLines += 1;
                                         outputFile1.writeline (countingLines + tempHolder );
                                     }
@@ -480,6 +496,8 @@ End Function
                             outputFile0.Close();
                         }
                     outputFile1.Close();
+                    fillTableRows(String('.\\output\\result_' + newDateFileName),sorting);
+                    DeleteFile(String('.\\output\\result_' + newDateFileName));
                 } else {
                     alert ("Please select at least one 'Mounted On' slice to process.");
                     return false;
@@ -490,13 +508,122 @@ End Function
             }  
         }
 
-        function fillTableRows() {
-            fileListDiv = window.document.getElementById('resultTable');
-            while (fileListDiv.hasChildNodes()) {   
-                fileListDiv.removeChild(fileListDiv.firstChild);
-            } 
-        }
+       function fillTableRows(basicFile,sorting) {
+                var col,i,j,k;
+                var tableHeader = ['S/N','Server ID','Filesystem','size','used','avail','capacity','Mounted on']
+                fileListDiv = window.document.getElementById('resultTable');
+                while (fileListDiv.hasChildNodes()) {   
+                    fileListDiv.removeChild(fileListDiv.firstChild);
+                } 
+                window.document.getElementById("resultTable").style.visibility = "visible"
+                var body = window.document.getElementById('resultTable');
+                var tbl  = window.document.createElement("table");
+                var tblBody = window.document.createElement("tbody");  
+                var row = window.document.createElement("tr");       
+                for (col = 0; col < tableHeader.length; col++){
+                    // Create a <td> element and a text node, make the text
+                    // node the contents of the <td>, and put the <td> at
+                    // the end of the table row
+                    var cell = window.document.createElement("td");
+                    var cellText = window.document.createTextNode(tableHeader[col]);
+                    cell.appendChild(cellText);
+                    row.appendChild(cell);
+                }
+                // add the row to the end of the table body
+                tblBody.appendChild(row);           
 
+                var tempHolderArrayFill =[];
+                var tempHolderFill = '';
+                    if (sorting === 'basic'){
+                        outputFile0 = objFSO.OpenTextFile(basicFile,ForReading,dontWantCreateIt,AsciiMode);
+                        while (!outputFile0.AtEndOfStream){ 
+                            tempHolderFill = String(outputFile0.readline());
+                            if (tempHolderFill.length > 0){
+                                tempHolderArrayFill = tempHolderFill.split(',');
+                                if(tempHolderArrayFill.length > 0) {
+                                    row = window.document.createElement("tr");
+                                    for (col = 0; col < tempHolderArrayFill.length; col++){
+                                        cell = window.document.createElement("td");
+                                        cellText = window.document.createTextNode(tempHolderArrayFill[col]);
+                                        cell.appendChild(cellText);
+                                        row.appendChild(cell);
+                                    }
+                                    tblBody.appendChild(row); 
+                                }
+                            }
+                        }
+                        outputFile0.Close();
+                        DeleteFile(basicFile);
+                    }
+                    if (sorting === 'adv'){
+                        if (window.document.getElementById("sortingValue").value == ''){
+                            alert("Please select a 'sort by' value ");
+                            return;
+                        } else if (window.document.getElementById("greenValue").value == '') {
+                            alert("Please select a 'percent' value ");
+                            return;
+                        } else {
+                            //alert(window.document.getElementById("sortingValue").value + '\n' + window.document.getElementById("greenValue").value );
+                            var perEachLineArray = [];
+                            var perEachPercentArray = [];
+                            var percentValue = '';
+                            var lowHigh;
+                            outputFile0 = objFSO.OpenTextFile(basicFile,ForReading,dontWantCreateIt,AsciiMode);
+                            while (!outputFile0.AtEndOfStream){
+                                tempHolderFill = String(outputFile0.readline());
+                                if (tempHolderFill.length > 0){
+                                    tempHolderArrayFill = tempHolderFill.split(',');
+                                    percentValue = Number(tempHolderArrayFill[6].replace('%',''));
+                                    perEachLineArray.push(tempHolderFill);
+                                    perEachPercentArray.push(percentValue);                                    
+                                }
+                            }
+                            outputFile0.Close();
+                            DeleteFile(basicFile);
+                            if(window.document.getElementById("sortingValue").value == 'largeSize'){
+                                perEachPercentArray.sort(function(a, b){return b-a})
+                            } else {
+                                perEachPercentArray.sort(function(a, b){return a-b})
+                            }
+                            var sortedArray = [];
+                            perEachPercentArray.forEach(function(element){sortedArray.push(element + '%')});
+                                for (i = 0; i < sortedArray.length; i++ ){
+                                    for (j = 0; j < perEachLineArray.length; j++ ){
+                                        if(perEachLineArray[j] !== undefined){
+                                            tempHolderArrayFill = perEachLineArray[j].split(',');
+                                            if (tempHolderArrayFill[6] === sortedArray[i]){
+                                                row = window.document.createElement("tr");
+                                                for (col = 0; col < tempHolderArrayFill.length; col++){
+                                                    cell = window.document.createElement("td");
+                                                    cellText = window.document.createTextNode(tempHolderArrayFill[col]);
+                                                    cell.appendChild(cellText);
+                                                        percentValue = Number(tempHolderArrayFill[col].replace('%',''));
+                                                            lowHigh = window.document.getElementById("greenValue").value;
+                                                            if (percentValue >= lowHigh && col==6){
+                                                                cell.setAttribute("bgcolor", "red")
+                                                            } else if (percentValue < lowHigh && col==6) {
+                                                                cell.setAttribute("bgcolor", "green")
+                                                            } else {
+                                                                cell.setAttribute("bgcolor", "transparent")
+                                                            }
+                                                    row.appendChild(cell);
+                                                }
+                                                tblBody.appendChild(row); 
+                                                delete perEachLineArray[j];                                                
+                                            }
+                                        }
+                                    }
+                                }
+                        }
+                    }
+                        
+                // put the <tbody> in the <table>
+                tbl.appendChild(tblBody);
+                // appends <table> into <body>
+                body.appendChild(tbl);
+                // sets the border attribute of tbl to 2;
+                tbl.setAttribute("border", "2");
+       }
 
 		function jumpToElementsortingValue() {
             if (window.document.getElementById("sortPercent").style.visibility == "visible") {
@@ -520,17 +647,26 @@ End Function
 <table width="50%" border=1>
 <tr><td colspan=2>List of servers to connect through Plink. <br>If using name, make sure name to IP mapping is functioning correctly.</td></tr>
 <tr><td rowspan=2><TEXTAREA style="Height:80px;font-Size:12;font-weight:normal;";TITLE=""; id="textAreaListServers"; WRAP=hard>
+192.168.11.100
+192.168.11.100
 192.168.11.100</TEXTAREA></td>
-<td>Username <input type="text" id="strUser" value='' style="width:260px;background-color:#f48942" ></td></tr>
-<tr><td>Password <input type="password" id="strPassword" value='' style="width:260px;background-color:#f48942" ></td></tr>
+<td>Username <input type="text" id="strUser" value="hirman" style="width:260px;background-color:#f48942" ></td></tr>
+<tr><td>Password <input type="password" id="strPassword" value="jumajava1974" style="width:260px;background-color:#f48942" ></td></tr>
 </table>
 
 
      
 
-<table width="50%" border=0>
-<tr><td align=left ><input type="button" style="width:140px;height:25px" value="Connect" onClick="Connecting()" title="Begin connect to servers."></td></tr>
-<tr><td align=left ><input type="button" style="width:140px;height:25px" value="View Past Results" onClick="collectPastFiles()" title="Load previous sessions from ouput folder."></td></tr>
+<table>
+<tr>
+<td align=left ><input type="button" style="width:140px;height:25px" value="Connect" onClick="Connecting()" title="Begin connect to servers."></td>
+<td><input type="checkbox" name="connectSSH" id="connectSSH" > <label for="connectSSH">use SSH connection</label></td>    
+<td></td>      
+</tr>
+<tr><td align=left ><input type="button" style="width:140px;height:25px" value="View Past Results" onClick="collectPastFiles()" title="Load previous sessions from ouput folder."></td>
+<td></td>
+<td></td> 
+</tr>
 </table>    
 
 <br><br>
@@ -543,36 +679,36 @@ End Function
 <tr><td align=left >Select 'Mounted On' slice.</td><td align=left>Select dated files to process.</td></tr>
 <tr><td><div id='spliceLists'></div></td></td><td><div id='fileListJS'></div></td></tr>
 </form>    
-<tr><td>&nbsp</td>
 </table>
 </div>
 
 <table width="50%" border=0>
-<td align=left><input type="button" style="width:120px;height:25px" value="Create Report" onClick="checkboxParser()" title="Generate percentage report."></td>
+<td align=left><input type="button" style="width:120px;height:25px" value="Basic Report" onClick="checkboxParser('basic')" title="Generate percentage report."></td>
 <td align=left><input type="button" style="width:120px;height:25px" value="Reset Page" onClick="window.location.reload()" title="Clear page to default."></td></tr>
 </table> 
 
 <tr><th colspan=3 align=left>Volume percent reporting.</th>
 </tr>
 <tr><td colspan=3>
-<input type="checkbox" name="showColor" id="showColor" onchange="jumpToElementsortingValue()"> <label for="showColor">Show usage color in report.</label>
+<input type="checkbox" name="showColor" id="showColor" onchange="jumpToElementsortingValue()"> <label for="showColor">Custom sorting.</label>
 </td></tr>
 </table>
 
     
 <div id='sortPercent'>    
 <table>
-<tr><td>Sort by</td><td colspan=2 align=left>
+<tr><td>Sort by</td><td align=left>
 <select name="sortingValue"  id="sortingValue" style='width:170px;' onchange="jumpToElementgreenValue()">
 	<option value="" disabled selected>Select
-	<option value="default">Default Sorting</option>
+<!--<option value="default">Default Sorting</option>-->
 	<option value="largeSize">Largest volume</option>
 	<option value="smallSize">Smallest volume</option>
-</select></td>
+</select><td><input type="button" style="width:120px;height:25px" value="Sorted Report" onClick="checkboxParser('adv');" title="Generate percentage report."></td>
 </tr>
 <tr><td>Under</td><td align=left>	
 <select name="greenValue"  id="greenValue">
 	<option value="" disabled selected>Select</option>
+	<option value="10"> &nbsp 10% </option>
 	<option value="50"> &nbsp 50% </option>
 	<option value="55"> &nbsp 55% </option>
 	<option value="60"> &nbsp 60% </option>
@@ -582,16 +718,14 @@ End Function
 	<option value="80"> &nbsp 80% </option>
 	<option value="85"> &nbsp 85% </option>
 	<option value="90"> &nbsp 90% </option>
-</select></td><td>is green status. Over percent is red.</td>
+</select>is green status.</td><td> Over percent is red.</td>
 </tr>
 </table>
 </div>
 
 
 <div id='resultTable'>
-<table border=1>
-<tr><th>Server ID</th><th>Filesystem</th><th>size</th><th>used</th><th>avail</th><th>capacity</th><th>Mounted on</th></tr>
-</table>    
+   
 </div>     
 
 </body>
