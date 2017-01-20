@@ -558,14 +558,14 @@ End Function
                         if (window.document.getElementById("sortingValue").value == ''){
                             alert("Please select a 'sort by' value ");
                             return;
-                        } else if (window.document.getElementById("greenValue").value == '') {
+                        } else if ((window.document.getElementById("greenValue").value == '') || (window.document.getElementById("amberValue").value == '')) {
                             alert("Please select a 'percent' value ");
                             return;
                         }
                         var perEachLineArray = [];
                         var perEachPercentArray = [];
                         var percentValue = '';
-                        var lowHigh;
+                        var lowHigh, redHigh;
                         outputFile0 = objFSO.OpenTextFile(basicFile,ForReading,dontWantCreateIt,AsciiMode);
                         while (!outputFile0.AtEndOfStream){
                             tempHolderFill = String(outputFile0.readline());
@@ -594,10 +594,13 @@ End Function
                                                         //if (tempHolderArrayFill[6] === sortedArray[i]){
                                                         percentValue = Number(tempHolderArrayFill[col].replace('%',''));
                                                             lowHigh = window.document.getElementById("greenValue").value;
-                                                            if (percentValue >= lowHigh && col==6){
+                                                            redHigh = window.document.getElementById("amberValue").value;
+                                                            if (percentValue >= redHigh && col==6){
                                                                 cell.setAttribute("bgcolor", "red")
-                                                            } else if (percentValue < lowHigh && col==6) {
-                                                                cell.setAttribute("bgcolor", "green")
+                                                            } else if (percentValue < redHigh && percentValue > lowHigh && col==6) {
+                                                                cell.setAttribute("bgcolor", "yellow")
+                                                            } else if (percentValue <= lowHigh && col==6) {
+                                                                cell.setAttribute("bgcolor", "green")                                                                
                                                             } else {
                                                                 cell.setAttribute("bgcolor", "transparent")
                                                             }
@@ -629,10 +632,13 @@ End Function
                                                         cell.appendChild(cellText);
                                                             percentValue = Number(tempHolderArrayFill[col].replace('%',''));
                                                                 lowHigh = window.document.getElementById("greenValue").value;
-                                                                if (percentValue >= lowHigh && col==6){
+                                                                redHigh = window.document.getElementById("amberValue").value;
+                                                                if (percentValue >= redHigh && col==6){
                                                                     cell.setAttribute("bgcolor", "red")
-                                                                } else if (percentValue < lowHigh && col==6) {
-                                                                    cell.setAttribute("bgcolor", "green")
+                                                                } else if (percentValue < redHigh && percentValue > lowHigh && col==6) {
+                                                                    cell.setAttribute("bgcolor", "yellow")
+                                                                } else if (percentValue <= lowHigh && col==6) {
+                                                                    cell.setAttribute("bgcolor", "green")                                                                
                                                                 } else {
                                                                     cell.setAttribute("bgcolor", "transparent")
                                                                 }
@@ -666,6 +672,58 @@ End Function
 			//var tempSelected = document.getElementById("showColor").value;
 			window.location.hash = '#greenValue';
 		}
+        
+		function jumpToElementamberValue(){
+			//var tempSelected = document.getElementById("showColor").value;
+            while (amberValue.hasChildNodes()) {   
+                amberValue.removeChild(amberValue.firstChild);
+            }             
+			window.location.hash = '#amberValue';
+            lowHigh = window.document.getElementById("greenValue").value;
+            var optionsArray = [];
+                switch(Number(lowHigh)) {
+                    case 10:
+                        optionsArray = [20,50,55,60,65,70,75,80,85,90,95];
+                        break;
+                    case 50:
+                        optionsArray = [55,60,65,70,75,80,85,90,95];
+                        break;
+                    case 55:
+                        optionsArray = [60,65,70,75,80,85,90,95];
+                        break;
+                    case 60:
+                        optionsArray = [65,70,75,80,85,90,95];
+                        break;
+                    case 65:
+                        optionsArray = [70,75,80,85,90,95];
+                        break;
+                    case 70:
+                        optionsArray = [75,80,85,90,95];
+                        break;
+                    case 75:
+                        optionsArray = [80,85,90,95];
+                        break;
+                    case 80:
+                        optionsArray = [85,90,95];
+                        break;
+                    case 85:
+                        optionsArray = [90,95];
+                        break;
+                    case 90:
+                        optionsArray = [95];
+                        break;
+                }   
+				var select = window.document.getElementById("amberValue"); 
+				var options = optionsArray;
+                var i;
+				for(i = 0; i < options.length; i++) {
+					var opt = options[i];
+					var el = window.document.createElement("option");
+					el.textContent = '  ' + opt + '% ';
+					el.value = opt;
+					select.appendChild(el);
+				}	            
+		}        
 
 				
 	 -->
@@ -673,7 +731,7 @@ End Function
  
 </head>
 <body onload="Set()">
-<table width="50%" border=1>
+<table width="50%" border=2>
 <tr><td colspan=2>List of servers to connect through Plink. <br>If using name, make sure name to IP mapping is functioning correctly.</td></tr>
 <tr><td rowspan=2><TEXTAREA style="Height:80px;font-Size:12;font-weight:normal;";TITLE=""; id="textAreaListServers"; WRAP=hard>
 192.168.11.100
@@ -725,30 +783,36 @@ End Function
 
     
 <div id='sortPercent'>    
-<table>
+<table border=0>
 <tr><td>Sort by</td><td align=left>
 <select name="sortingValue"  id="sortingValue" style='width:170px;' onchange="jumpToElementgreenValue()">
 	<option value="" disabled selected>Select
     <option value="defaultSize">Default Sorting</option>
 	<option value="largeSize">Largest volume</option>
 	<option value="smallSize">Smallest volume</option>
-</select><td><input type="button" style="width:120px;height:25px" value="Sorted Report" onClick="checkboxParser('adv');" title="Generate percentage report."></td>
+</select><td><input type="button" style="width:145px;height:25px" value="Sorted Report" onClick="checkboxParser('adv');" title="Generate percentage report."></td>
 </tr>
 <tr><td>Under</td><td align=left>	
-<select name="greenValue"  id="greenValue">
+<select name="greenValue"  id="greenValue" onchange="jumpToElementamberValue()">
 	<option value="" disabled selected>Select</option>
-	<option value="10"> &nbsp 10% </option>
-	<option value="50"> &nbsp 50% </option>
-	<option value="55"> &nbsp 55% </option>
-	<option value="60"> &nbsp 60% </option>
-	<option value="65"> &nbsp 65% </option>
-	<option value="70"> &nbsp 70% </option>
-	<option value="75"> &nbsp 75% </option>
-	<option value="80"> &nbsp 80% </option>
-	<option value="85"> &nbsp 85% </option>
-	<option value="90"> &nbsp 90% </option>
-</select>is green status.</td><td> Over percent is red.</td>
+	<option value="10">10%</option>
+	<option value="50">50%</option>
+	<option value="55">55%</option>
+	<option value="60">60%</option>
+	<option value="65">65%</option>
+	<option value="70">70%</option>
+	<option value="75">75%</option>
+	<option value="80">80%</option>
+	<option value="85">85%</option>
+    <option value="90">90%</option>
+</select> is label as green.</td><td></td>
 </tr>
+<tr><td colspan=3>In between is label as amber percentage value.</td></tr>
+<tr><td>Above</td><td align=left>	
+<select name="amberValue"  id="amberValue">
+	<option value="" disabled selected>Select</option>
+</select> is label as red.</td><td></td>
+</tr>    
 </table>
 </div>
 
