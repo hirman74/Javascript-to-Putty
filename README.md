@@ -1,0 +1,1 @@
+For support staff to create df -h reports with percentage values represented in colors. For cases when companies/departments have no proper tools for disk space monitoring. Instead all checks are done manually. Code will connect to each server via plink and represent each server disk slice usage in colored report.
